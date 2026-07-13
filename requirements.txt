@@ -1,0 +1,11 @@
+# VivaMind agent — Step M2
+# Using LiveKit Inference (models via LiveKit Cloud) so no provider keys are needed.
+
+livekit-agents[silero]>=1.6
+python-dotenv>=1.0
+
+# --- If you later self-host / bring your own model keys, add the plugins you use:
+# livekit-plugins-deepgram
+# livekit-plugins-openai
+# livekit-plugins-cartesia
+# livekit-plugins-turn-detector      # better end-of-turn detection (14 languages)
