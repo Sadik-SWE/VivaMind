@@ -1,25 +1,25 @@
 """
-VivaMind — Step M3: multi-agent viva panel (replaces the M2 single-examiner agent.py).
+VivaMind — Step M4: multi-agent viva panel + rubric scoring + saved report.
 
 Flow:
-    IntakeAgent  ->  PanelExaminer(HR)  ->  (Technical)  ->  (PM)  ->  ClosingAgent
+    IntakeAgent -> PanelExaminer(HR) -> (Technical) -> (PM) -> ClosingAgent
 
-- Handoff: an examiner calls the `section_complete` tool, which RETURNS the next
-  Agent. LiveKit swaps the active agent in the same live session — the candidate
-  never notices a "restart".
-- Shared state: the candidate's name, department and per-section notes live in a
-  typed `CandidateData` object on the session, so every examiner can read it and
-  M4 scoring has structured data to work with.
-- Scaling: the number of examiners is decided by ACTIVE_PANEL below. Change the
-  slice to go from a 3-agent demo to the full 8-agent panel — no other edits.
+New in M4:
+- Each examiner scores its rubric dimension 0-10 with a justification (explainable).
+- At the end, a full report is compiled, printed to the terminal, and SAVED as a
+  JSON file in ./reports. The candidate is never told the score (human-in-the-loop:
+  the report goes to the faculty board, which makes the final decision).
 
 Run:
     python agent.py dev
-(then connect from the Agents Playground — see SETUP.md)
+(then connect from the Agent Console — see SETUP.md)
 """
 
+import json
 import logging
 from dataclasses import dataclass, field
+from datetime import datetime
+from pathlib import Path
 from typing import Optional
 
 from dotenv import load_dotenv
@@ -36,6 +36,7 @@ from prompts import (
 )
 
 load_dotenv()
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("vivamind")
 
 # ---------------------------------------------------------------------------
@@ -44,6 +45,8 @@ logger = logging.getLogger("vivamind")
 # ---------------------------------------------------------------------------
 ACTIVE_PANEL = PANEL[:3]
 
+PASS_THRESHOLD = 6.0  # avg >= this -> recommended (a recommendation, not a decision)
+
 
 @dataclass
 class CandidateData:
@@ -51,9 +54,57 @@ class CandidateData:
     name: Optional[str] = None
     department: Optional[str] = None
     stage_index: int = 0
-    notes: dict = field(default_factory=dict)  # stage_key -> examiner's note (M4 scoring)
+    # dimension -> {"score": int, "justification": str}
+    scores: dict = field(default_factory=dict)
 
 
+# --------------------------- report helpers --------------------------------
+def build_report(ud: CandidateData) -> dict:
+    values = [v["score"] for v in ud.scores.values()] or [0]
+    overall = round(sum(values) / len(values), 1)
+    return {
+        "candidate": ud.name,
+        "department": ud.department,
+        "scores": ud.scores,
+        "overall": overall,
+        "recommendation": (
+            "Recommended for panel review"
+            if overall >= PASS_THRESHOLD
+            else "Needs further panel discussion"
+        ),
+        "note": "AI-generated recommendation only. The final admission decision "
+                "rests with the human faculty board.",
+        "timestamp": datetime.now().isoformat(timespec="seconds"),
+    }
+
+
+def save_report(report: dict) -> str:
+    Path("reports").mkdir(exist_ok=True)
+    safe = (report["candidate"] or "candidate").replace(" ", "_")
+    path = f"reports/{safe}_{datetime.now():%Y%m%d_%H%M%S}.json"
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(report, f, indent=2, ensure_ascii=False)
+    return path
+
+
+def print_report(report: dict, path: str) -> None:
+    line = "=" * 52
+    print("\n" + line)
+    print("   VivaMind — Score Report")
+    print(line)
+    print(f" Candidate : {report['candidate']} ({report['department']})")
+    print("-" * 52)
+    for dim, v in report["scores"].items():
+        print(f" {dim}: {v['score']}/10 — {v['justification']}")
+    print("-" * 52)
+    print(f" Overall   : {report['overall']}/10")
+    print(f" Suggestion: {report['recommendation']}")
+    print(" (AI recommendation — human faculty board decides.)")
+    print(f" Saved     : {path}")
+    print(line + "\n")
+
+
+# ------------------------------- agents ------------------------------------
 class IntakeAgent(Agent):
     """Collects the candidate's name + department, then starts the panel."""
 
@@ -85,15 +136,14 @@ class IntakeAgent(Agent):
 
 
 class PanelExaminer(Agent):
-    """One examiner. Asks its section, then hands off to the next (or closes)."""
+    """One examiner. Asks its section, scores it, then hands off (or closes)."""
 
     def __init__(self, stage_index: int) -> None:
         self.stage_index = stage_index
         self.stage = ACTIVE_PANEL[stage_index]
         super().__init__(instructions=build_examiner_instructions(self.stage))
-        # To make it feel like a real panel, give each examiner a distinct voice:
+        # For a real panel feel, give each examiner a distinct voice:
         #   super().__init__(instructions=..., tts="cartesia/sonic-2:<VOICE_ID>")
-        # (fill valid Cartesia voice IDs from your LiveKit/Cartesia dashboard.)
 
     async def on_enter(self) -> None:
         ud = self.session.userdata
@@ -109,16 +159,20 @@ class PanelExaminer(Agent):
 
     @function_tool
     async def section_complete(
-        self, context: RunContext[CandidateData], brief_note: str
+        self, context: RunContext[CandidateData], score: int, justification: str
     ) -> tuple[Agent, str]:
-        """Call this once you have asked your two questions for this section.
+        """Call this once you have asked your questions and can score this section.
 
         Args:
-            brief_note: A 1-2 sentence neutral observation about the candidate's
-                answers, for the panel's records.
+            score: Integer 0-10 rating the candidate on this section's dimension.
+            justification: One or two neutral sentences explaining the score.
         """
         ud = context.userdata
-        ud.notes[self.stage["key"]] = brief_note
+        ud.scores[self.stage["dimension"]] = {
+            "score": max(0, min(10, int(score))),
+            "justification": justification,
+        }
+        logger.info("Scored %s: %s/10", self.stage["dimension"], score)
 
         next_index = self.stage_index + 1
         if next_index < len(ACTIVE_PANEL):
@@ -129,7 +183,7 @@ class PanelExaminer(Agent):
 
 
 class ClosingAgent(Agent):
-    """Thanks the candidate and ends without revealing any result."""
+    """Thanks the candidate, then compiles + saves the report (never read aloud)."""
 
     def __init__(self) -> None:
         super().__init__(instructions=CLOSING_INSTRUCTIONS)
@@ -137,11 +191,14 @@ class ClosingAgent(Agent):
     async def on_enter(self) -> None:
         ud = self.session.userdata
         name = ud.name or "the candidate"
-        logger.info("Viva complete for %s. Notes: %s", name, ud.notes)
         await self.session.generate_reply(
             instructions=f"Thank {name} for attending, say the panel will share "
-                         f"results later, and end warmly."
+                         f"results later, and end warmly. Do NOT mention any score."
         )
+        # Compile + save the report server-side (goes to faculty, not the candidate).
+        report = build_report(ud)
+        path = save_report(report)
+        print_report(report, path)
 
 
 async def entrypoint(ctx: agents.JobContext) -> None:

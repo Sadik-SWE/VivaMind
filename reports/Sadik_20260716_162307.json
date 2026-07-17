@@ -1,0 +1,22 @@
+{
+  "candidate": "Sadik",
+  "department": "CSE",
+  "scores": {
+    "Communication & Confidence": {
+      "score": 5,
+      "justification": "The candidate gave brief and clear answers but could provide more depth about their motivation. Communication was straightforward but somewhat limited in detail."
+    },
+    "Technical Knowledge": {
+      "score": 2,
+      "justification": "The candidate was unable to explain fundamental concepts such as linked lists and binary search, indicating limited technical knowledge in this section."
+    },
+    "Teamwork": {
+      "score": 4,
+      "justification": "The candidate gave brief and minimal responses about managing missed deadlines and did not provide examples about handling disagreements in a team."
+    }
+  },
+  "overall": 3.7,
+  "recommendation": "Needs further panel discussion",
+  "note": "AI-generated recommendation only. The final admission decision rests with the human faculty board.",
+  "timestamp": "2026-07-16T16:23:07"
+}

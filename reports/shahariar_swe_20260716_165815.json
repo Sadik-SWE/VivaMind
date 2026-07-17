@@ -1,0 +1,22 @@
+{
+  "candidate": "shahariar swe",
+  "department": "swe",
+  "scores": {
+    "Communication & Confidence": {
+      "score": 3,
+      "justification": "The candidate gave very brief and unclear answers about their motivation and introduction, which limits assessment of communication and confidence."
+    },
+    "Technical Knowledge": {
+      "score": 3,
+      "justification": "The candidate was unable to explain what a data structure is or provide examples but acknowledged the importance of understanding data structures."
+    },
+    "Teamwork": {
+      "score": 0,
+      "justification": "The candidate was unwilling to engage in answering questions about teamwork and handling project issues."
+    }
+  },
+  "overall": 2.0,
+  "recommendation": "Needs further panel discussion",
+  "note": "AI-generated recommendation only. The final admission decision rests with the human faculty board.",
+  "timestamp": "2026-07-16T16:58:15"
+}
