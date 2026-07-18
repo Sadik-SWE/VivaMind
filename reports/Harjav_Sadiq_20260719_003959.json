@@ -1,0 +1,22 @@
+{
+  "candidate": "Harjav Sadiq",
+  "department": "CSC",
+  "scores": {
+    "Communication & Confidence": {
+      "score": 8,
+      "justification": "The candidate communicated clearly and confidently about their motivation and experience in IT development, providing relevant details."
+    },
+    "Technical Knowledge": {
+      "score": 2,
+      "justification": "The candidate showed limited understanding and was unable to explain basic technical concepts related to programming variables or data structures."
+    },
+    "Teamwork": {
+      "score": 2,
+      "justification": "The candidate gave very brief and unclear responses, lacking specific examples or elaboration on teamwork experiences or handling missed deadlines."
+    }
+  },
+  "overall": 4.0,
+  "recommendation": "Needs further panel discussion",
+  "note": "AI-generated recommendation only. The final admission decision rests with the human faculty board.",
+  "timestamp": "2026-07-19T00:39:59"
+}

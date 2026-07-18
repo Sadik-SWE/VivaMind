@@ -1,0 +1,22 @@
+{
+  "candidate": "sadik",
+  "department": "cse",
+  "scores": {
+    "Communication & Confidence": {
+      "score": 2,
+      "justification": "The candidate gave very brief and unclear answers to the questions about self-introduction and communication experience, indicating limited communication and confidence."
+    },
+    "Technical Knowledge": {
+      "score": 3,
+      "justification": "The candidate has a basic understanding of the importance of data structures but was unable to provide specific examples or elaborate on their usage."
+    },
+    "Teamwork": {
+      "score": 2,
+      "justification": "Candidate was unable or unwilling to explain their teamwork approach or how they handle missed deadlines or disagreements within a team."
+    }
+  },
+  "overall": 2.3,
+  "recommendation": "Needs further panel discussion",
+  "note": "AI-generated recommendation only. The final admission decision rests with the human faculty board.",
+  "timestamp": "2026-07-19T00:19:50"
+}
